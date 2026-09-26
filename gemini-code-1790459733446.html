@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subasta FC - Alternancia Fija</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --card-bg: #151c2c;
+      --card-border: #232d42;
+      --text-main: #ffffff;
+      --text-sub: #8e9bb0;
+      --green-btn: #10b981;
+      --red-btn: #ef4444;
+      --accent-blue: #3b82f6;
+      --accent-gold: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 15px;
+      overflow-x: hidden;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+    }
+
+    /* PANTALLA DE INICIO */
+    .welcome-screen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at center, #1e293b 0%, #0b0f19 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+      padding: 25px;
+      text-align: center;
+      transition: all 0.5s ease;
+    }
+
+    .welcome-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(1.1);
+    }
+
+    .logo-badge {
+      font-size: 65px;
+      animation: floatLogo 3s ease-in-out infinite;
+      margin-bottom: 10px;
+    }
+
+    @keyframes floatLogo {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+
+    .welcome-title {
+      font-size: 36px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #f59e0b, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 5px;
+      letter-spacing: 1px;
+    }
+
+    .welcome-subtitle {
+      color: var(--text-sub);
+      font-size: 14px;
+      margin-bottom: 25px;
+    }
+
+    .welcome-inputs {
+      width: 100%;
+      max-width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 25px;
+    }
+
+    .welcome-input-group {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+      gap: 4px;
+    }
+
+    .welcome-input-group label {
+      font-size: 12px;
+      color: var(--text-sub);
+      font-weight: bold;
+    }
+
+    .welcome-input {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--card-border);
+      padding: 12px;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: bold;
+      outline: none;
+    }
+
+    .welcome-input:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .btn-start-game {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      font-size: 18px;
+      font-weight: 900;
+      padding: 16px 40px;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+      transition: all 0.2s;
+    }
+
+    /* TOP BAR */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px;
+    }
+
+    .btn-restart {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    /* SCOREBOARD */
+    .scoreboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .player-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: transform 0.3s, border-color 0.3s;
+    }
+
+    .player-card.active-turn {
+      border-color: #f59e0b;
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .player-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      margin-bottom: 6px;
+      background-color: #2a364f;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 22px;
+      border: 2px solid var(--accent-blue);
+    }
+
+    .player-name-display {
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 2px;
+    }
+
+    .player-budget {
+      font-size: 22px;
+      font-weight: 800;
+      color: #34d399;
+    }
+
+    .player-count {
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    /* RULETA BANNER */
+    .roulette-container {
+      background: #111827;
+      border: 1px dashed var(--accent-gold);
+      border-radius: 12px;
+      padding: 10px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .roulette-title {
+      font-size: 11px;
+      color: var(--text-sub);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .roulette-winner-box {
+      font-size: 16px;
+      font-weight: 900;
+      color: #f59e0b;
+      margin-top: 4px;
+      min-height: 24px;
+    }
+
+    /* AUCTION CARD */
+    .auction-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 18px 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .auction-card.prime-card {
+      background: radial-gradient(circle at center, #2d1d03 0%, #151c2c 100%);
+      border: 2px solid #f59e0b;
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.3);
+    }
+
+    .prime-badge {
+      display: none;
+      background: linear-gradient(135deg, #f59e0b, #b45309);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 900;
+      padding: 4px 12px;
+      border-radius: 20px;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px;
+    }
+
+    .auction-card.prime-card .prime-badge {
+      display: inline-block;
+    }
+
+    .auction-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-sub);
+      margin-bottom: 4px;
+    }
+
+    .footballer-name {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .footballer-info {
+      font-size: 12px;
+      color: var(--text-sub);
+      margin-bottom: 10px;
+    }
+
+    .footballer-avatar {
+      width: 85px;
+      height: 85px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #2a3b5c 0%, #151c2c 100%);
+      border: 3px solid #3b82f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 42px;
+      margin: 5px 0;
+    }
+
+    .auction-card.prime-card .footballer-avatar {
+      border-color: #f59e0b;
+      background: radial-gradient(circle, #54390b 0%, #151c2c 100%);
+    }
+
+    .current-bid {
+      font-size: 36px;
+      font-weight: 900;
+      margin: 4px 0 2px 0;
+      color: #fff;
+    }
+
+    .current-bid.bump {
+      transform: scale(1.2);
+      color: #10b981;
+    }
+
+    .bid-turn-info {
+      font-size: 13px;
+      color: var(--text-sub);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .bid-actions {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      margin-bottom: 8px;
+    }
+
+    .btn-bid {
+      flex: 1;
+      background-color: var(--green-btn);
+      color: white;
+      border: none;
+      padding: 12px 6px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .btn-bid:disabled {
+      background-color: #2a364f;
+      color: #5d6d88;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .btn-pass {
+      width: 100%;
+      background-color: #2b1f2d;
+      color: var(--red-btn);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 10px;
+      border-radius: 10px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .btn-pass:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* SQUADS */
+    .squads-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .squad-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 12px;
+      min-height: 120px;
+    }
+
+    .squad-header {
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--text-sub);
+      margin-bottom: 8px;
+    }
+
+    .squad-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .squad-item {
+      background: #1e2738;
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .squad-item.is-prime {
+      border: 1px solid #f59e0b;
+      background: #2a1f0c;
+    }
+
+    /* TOAST FICHAJE */
+    .signing-toast {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background: rgba(16, 185, 129, 0.95);
+      color: white;
+      padding: 15px 22px;
+      border-radius: 20px;
+      font-weight: 900;
+      font-size: 16px;
+      text-align: center;
+      pointer-events: none;
+      z-index: 50;
+      width: 85%;
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .signing-toast.show {
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    /* MODAL RESULTADOS */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.88);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 25px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PANTALLA DE INICIO -->
+  <div class="welcome-screen" id="welcome-screen">
+    <div class="logo-badge">⚽</div>
+    <div class="welcome-title">SUBASTA FC</div>
+    <div class="welcome-subtitle">Ruleta Inicial & Alternancia de Turnos</div>
+
+    <div class="welcome-inputs">
+      <div class="welcome-input-group">
+        <label>Jugador 1:</label>
+        <input type="text" id="init-p1-name" class="welcome-input" value="Jugador 1" placeholder="Tu nombre..." />
+      </div>
+      <div class="welcome-input-group">
+        <label>Jugador 2:</label>
+        <input type="text" id="init-p2-name" class="welcome-input" value="Jugador 2" placeholder="Rival..." />
+      </div>
+    </div>
+
+    <button class="btn-start-game" onclick="startGame()">¡JUGAR AHORA!</button>
+  </div>
+
+  <!-- APP PRINCIPAL -->
+  <div class="app-container">
+    <div class="top-bar">
+      <button class="btn-restart" onclick="showWelcomeScreen()">↺ Reiniciar Juego</button>
+      <div style="font-weight: bold; font-size: 15px; color: var(--accent-gold);">SUBASTA FC</div>
+    </div>
+
+    <!-- Scoreboard -->
+    <div class="scoreboard">
+      <div class="player-card" id="card-p1">
+        <div class="player-avatar">👤</div>
+        <div class="player-name-display" id="display-p1-name">Jugador 1</div>
+        <div class="player-budget" id="p1-budget">$20</div>
+        <div class="player-count" id="p1-count">0/4 fichajes</div>
+      </div>
+
+      <div class="player-card" id="card-p2">
+        <div class="player-avatar" style="border-color: #ec4899;">👤</div>
+        <div class="player-name-display" id="display-p2-name">Jugador 2</div>
+        <div class="player-budget" id="p2-budget">$20</div>
+        <div class="player-count" id="p2-count">0/4 fichajes</div>
+      </div>
+    </div>
+
+    <!-- BANNER DE RULETA Y ESTADO DE INICIO -->
+    <div class="roulette-container">
+      <div class="roulette-title" id="roulette-title-lbl">🎰 Sorteo Inicial de Partida</div>
+      <div class="roulette-winner-box" id="roulette-winner-box">Iniciando...</div>
+    </div>
+
+    <!-- Subasta Card -->
+    <div class="auction-card" id="auction-card-box">
+      <div class="signing-toast" id="signing-toast">¡FICHAJE!</div>
+      <div class="prime-badge">👑 LEYENDA PRIME EXCLUSIVA</div>
+
+      <div class="auction-title">Jugador en subasta</div>
+      <div class="footballer-name" id="fb-name">Cargando...</div>
+      <div class="footballer-info" id="fb-info">País · POS</div>
+      
+      <div class="footballer-avatar" id="fb-avatar">⚽</div>
+
+      <div class="current-bid" id="current-bid-txt">$0</div>
+      <div class="bid-turn-info" id="bid-turn-txt">A la espera del primer turno...</div>
+
+      <div class="bid-actions">
+        <button class="btn-bid" id="btn-p1-bid" onclick="bid(1)">Jugador 1 +$1</button>
+        <button class="btn-bid" id="btn-p2-bid" onclick="bid(2)">Jugador 2 +$1</button>
+      </div>
+      <button class="btn-pass" id="btn-pass" onclick="passTurn()">Pasar / Rendirse</button>
+    </div>
+
+    <!-- Squads -->
+    <div class="squads-container">
+      <div class="squad-card" id="squad-box-p1">
+        <div class="squad-header" id="squad-p1-title">Equipo Jugador 1</div>
+        <div class="squad-list" id="squad-p1-list">
+          <div style="color: var(--text-sub); font-size: 11px;">Sin fichajes</div>
+        </div>
+      </div>
+
+      <div class="squad-card" id="squad-box-p2">
+        <div class="squad-header" id="squad-p2-title">Equipo Jugador 2</div>
+        <div class="squad-list" id="squad-p2-list">
+          <div style="color: var(--text-sub); font-size: 11px;">Sin fichajes</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Final -->
+  <div class="modal-overlay" id="end-modal">
+    <div class="modal-content">
+      <div style="font-size: 50px;">🏆</div>
+      <div style="font-size: 26px; font-weight: 900; color: #f59e0b;" id="winner-title">¡CAMPEÓN!</div>
+      <p id="winner-subtitle" style="color: var(--text-sub); font-size: 14px; margin-bottom: 15px;"></p>
+      
+      <div id="results-detail" style="background: #1e2738; border-radius: 12px; padding: 12px; text-align: left; font-size: 12px; max-height: 200px; overflow-y: auto;"></div>
+
+      <button class="btn-bid" style="width: 100%; margin-top: 15px; padding: 14px;" onclick="showWelcomeScreen()">Jugar Otra Partida</button>
+    </div>
+  </div>
+
+  <script>
+    const PRIME_FOOTBALLERS = [
+      { name: "Maradona (1986)", country: "Argentina", pos: "MCO", ovr: 98, avatar: "👑", isPrime: true },
+      { name: "Pelé (1970)", country: "Brasil", pos: "DEL", ovr: 98, avatar: "👑", isPrime: true },
+      { name: "Lionel Messi (2012)", country: "Argentina", pos: "ED", ovr: 97, avatar: "👑", isPrime: true },
+      { name: "Cristiano Ronaldo (2017)", country: "Portugal", pos: "EI", ovr: 97, avatar: "👑", isPrime: true },
+      { name: "Zinedine Zidane (1998)", country: "Francia", pos: "MCO", ovr: 96, avatar: "👑", isPrime: true },
+      { name: "Ronaldo Nazário (2002)", country: "Brasil", pos: "DEL", ovr: 96, avatar: "👑", isPrime: true },
+      { name: "Ronaldinho (2005)", country: "Brasil", pos: "EI", ovr: 95, avatar: "👑", isPrime: true },
+      { name: "Johan Cruyff (1974)", country: "Países Bajos", pos: "DEL", ovr: 95, avatar: "👑", isPrime: true },
+      { name: "Paolo Maldini (1994)", country: "Italia", pos: "DFC", ovr: 95, avatar: "👑", isPrime: true },
+      { name: "Thierry Henry (2004)", country: "Francia", pos: "DEL", ovr: 94, avatar: "👑", isPrime: true },
+      { name: "Marco van Basten (1988)", country: "Países Bajos", pos: "DEL", ovr: 94, avatar: "👑", isPrime: true },
+      { name: "Kaka (2007)", country: "Brasil", pos: "MCO", ovr: 93, avatar: "👑", isPrime: true },
+      { name: "Andrés Iniesta (2010)", country: "España", pos: "MC", ovr: 93, avatar: "👑", isPrime: true },
+      { name: "Xavi Hernández (2009)", country: "España", pos: "MC", ovr: 93, avatar: "👑", isPrime: true },
+      { name: "Gianluigi Buffon (2006)", country: "Italia", pos: "POR", ovr: 93, avatar: "👑", isPrime: true }
+    ];
+
+    const REGULAR_FOOTBALLERS = [
+      // Lista base de estrellas
+      { name: "Kylian Mbappé", country: "Francia", pos: "DEL", ovr: 91, avatar: "⚡" },
+      { name: "Erling Haaland", country: "Noruega", pos: "DEL", ovr: 91, avatar: "🤖" },
+      { name: "Vinícius Jr.", country: "Brasil", pos: "EI", ovr: 90, avatar: "🔥" },
+      { name: "Mohamed Salah", country: "Egipto", pos: "ED", ovr: 89, avatar: "👑" },
+      { name: "Harry Kane", country: "Inglaterra", pos: "DEL", ovr: 90, avatar: "🎯" },
+      { name: "Robert Lewandowski", country: "Polonia", pos: "DEL", ovr: 88, avatar: "⚽" },
+      { name: "Nico Williams", country: "España", pos: "EI", ovr: 85, avatar: "⚡" },
+      { name: "Lamine Yamal", country: "España", pos: "ED", ovr: 84, avatar: "💎" },
+      { name: "Rodrygo", country: "Brasil", pos: "ED", ovr: 86, avatar: "✨" },
+      { name: "Lautaro Martínez", country: "Argentina", pos: "DEL", ovr: 89, avatar: "🐂" },
+      { name: "Julian Álvarez", country: "Argentina", pos: "DEL", ovr: 85, avatar: "🕷️" },
+      { name: "Cole Palmer", country: "Inglaterra", pos: "MCO", ovr: 85, avatar: "🥶" },
+      { name: "Jude Bellingham", country: "Inglaterra", pos: "MED", ovr: 90, avatar: "🌟" },
+      { name: "Kevin De Bruyne", country: "Bélgica", pos: "MED", ovr: 90, avatar: "🎯" },
+      { name: "Rodri", country: "España", pos: "MCD", ovr: 91, avatar: "⚙️" },
+      { name: "Federico Valverde", country: "Uruguay", pos: "MED", ovr: 88, avatar: "🦅" },
+      { name: "Jamal Musiala", country: "Alemania", pos: "MCO", ovr: 87, avatar: "🪄" },
+      { name: "Florian Wirtz", country: "Alemania", pos: "MCO", ovr: 88, avatar: "🎨" },
+      { name: "Pedri", country: "España", pos: "MC", ovr: 86, avatar: "🎩" },
+      { name: "Virgil van Dijk", country: "Países Bajos", pos: "DFC", ovr: 89, avatar: "🧱" },
+
+      // Lista de los 100 futbolistas añadidos
+      { name: "Youssouf Fofana", country: "Francia", pos: "MC", ovr: 79, avatar: "⚽" },
+      { name: "Robin Gosens", country: "Alemania", pos: "LI", ovr: 77, avatar: "⚽" },
+      { name: "Oscar Bobb", country: "Noruega", pos: "ED", ovr: 76, avatar: "⚽" },
+      { name: "Kevin Danso", country: "Austria", pos: "DFC", ovr: 79, avatar: "⚽" },
+      { name: "Lucas Bergvall", country: "Suecia", pos: "MC", ovr: 72, avatar: "⚽" },
+      { name: "Nico González", country: "Argentina", pos: "ED", ovr: 81, avatar: "⚽" },
+      { name: "Rayan Cherki", country: "Francia", pos: "MCO", ovr: 79, avatar: "⚽" },
+      { name: "Dan Ndoye", country: "Suiza", pos: "ED", ovr: 76, avatar: "⚽" },
+      { name: "Alan Varela", country: "Argentina", pos: "MCD", ovr: 79, avatar: "⚽" },
+      { name: "Ansgar Knauff", country: "Alemania", pos: "ED", ovr: 75, avatar: "⚽" },
+      { name: "Morten Hjulmand", country: "Dinamarca", pos: "MCD", ovr: 81, avatar: "⚽" },
+      { name: "Javi Guerra", country: "España", pos: "MC", ovr: 77, avatar: "⚽" },
+      { name: "Kevin Schade", country: "Alemania", pos: "EI", ovr: 74, avatar: "⚽" },
+      { name: "Manu Koné", country: "Francia", pos: "MC", ovr: 81, avatar: "⚽" },
+      { name: "Roony Bardghji", country: "Suecia", pos: "ED", ovr: 73, avatar: "⚽" },
+      { name: "Maxence Lacroix", country: "Francia", pos: "DFC", ovr: 77, avatar: "⚽" },
+      { name: "Vitor Roque", country: "Brasil", pos: "DEL", ovr: 79, avatar: "⚽" },
+      { name: "Alex Scott", country: "Inglaterra", pos: "MC", ovr: 76, avatar: "⚽" },
+      { name: "Jobe Bellingham", country: "Inglaterra", pos: "MC", ovr: 77, avatar: "⚽" },
+      { name: "Arthur Theate", country: "Bélgica", pos: "DFC", ovr: 78, avatar: "⚽" },
+      { name: "Can Uzun", country: "Turquía", pos: "MCO", ovr: 75, avatar: "⚽" },
+      { name: "Piero Hincapié", country: "Ecuador", pos: "DFC", ovr: 81, avatar: "⚽" },
+      { name: "Oscar Gloukh", country: "Israel", pos: "MCO", ovr: 76, avatar: "⚽" },
+      { name: "Lewis Miley", country: "Inglaterra", pos: "MC", ovr: 73, avatar: "⚽" },
+      { name: "Brahim Díaz", country: "Marruecos", pos: "MCO", ovr: 82, avatar: "⚽" },
+      { name: "Oumar Solet", country: "Francia", pos: "DFC", ovr: 74, avatar: "⚽" },
+      { name: "Carlos Baleba", country: "Camerún", pos: "MC", ovr: 79, avatar: "⚽" },
+      { name: "Facundo Buonanotte", country: "Argentina", pos: "MCO", ovr: 75, avatar: "⚽" },
+      { name: "Jonathan Burkardt", country: "Alemania", pos: "DEL", ovr: 78, avatar: "⚽" },
+      { name: "Eliesse Ben Seghir", country: "Marruecos", pos: "MCO", ovr: 78, avatar: "⚽" },
+      { name: "Tyler Morton", country: "Inglaterra", pos: "MC", ovr: 74, avatar: "⚽" },
+      { name: "Jérémy Doku", country: "Bélgica", pos: "EI", ovr: 84, avatar: "⚡" },
+      { name: "Aster Vranckx", country: "Bélgica", pos: "MC", ovr: 73, avatar: "⚽" },
+      { name: "Cristhian Mosquera", country: "España", pos: "DFC", ovr: 78, avatar: "⚽" },
+      { name: "Martin Baturina", country: "Croacia", pos: "MC", ovr: 76, avatar: "⚽" },
+      { name: "Assan Ouédraogo", country: "Alemania", pos: "MC", ovr: 70, avatar: "⚽" },
+      { name: "Amadou Onana", country: "Bélgica", pos: "MCD", ovr: 82, avatar: "⚽" },
+      { name: "Mika Godts", country: "Bélgica", pos: "EI", ovr: 74, avatar: "⚽" },
+      { name: "Jhon Durán", country: "Colombia", pos: "DEL", ovr: 80, avatar: "⚽" },
+      { name: "Rocco Reitz", country: "Alemania", pos: "MC", ovr: 74, avatar: "⚽" },
+      { name: "Takefusa Kubo", country: "Japón", pos: "ED", ovr: 81, avatar: "⚽" },
+      { name: "Bilal El Khannouss", country: "Marruecos", pos: "MCO", ovr: 76, avatar: "⚽" },
+      { name: "Valentín Barco", country: "Argentina", pos: "LI", ovr: 76, avatar: "⚽" },
+      { name: "Natan", country: "Brasil", pos: "DFC", ovr: 75, avatar: "⚽" },
+      { name: "Georginio Rutter", country: "Francia", pos: "DEL", ovr: 78, avatar: "⚽" },
+      { name: "Ben Doak", country: "Escocia", pos: "ED", ovr: 71, avatar: "⚽" },
+      { name: "Andrey Santos", country: "Brasil", pos: "MC", ovr: 77, avatar: "⚽" },
+      { name: "Yeremay Hernández", country: "España", pos: "EI", ovr: 75, avatar: "⚽" },
+      { name: "Yaser Asprilla", country: "Colombia", pos: "ED", ovr: 75, avatar: "⚽" },
+      { name: "Fermín López", country: "España", pos: "MC", ovr: 80, avatar: "⚽" },
+      { name: "Khephren Thuram", country: "Francia", pos: "MC", ovr: 80, avatar: "⚽" },
+      { name: "Gift Orban", country: "Nigeria", pos: "DEL", ovr: 74, avatar: "⚽" },
+      { name: "Archie Gray", country: "Inglaterra", pos: "MC", ovr: 78, avatar: "⚽" },
+      { name: "Aimar Oroz", country: "España", pos: "MC", ovr: 74, avatar: "⚽" },
+      { name: "Dango Ouattara", country: "Burkina Faso", pos: "ED", ovr: 76, avatar: "⚽" },
+      { name: "Valentín Carboni", country: "Argentina", pos: "MCO", ovr: 74, avatar: "⚽" },
+      { name: "Oscar Mingueza", country: "España", pos: "LD", ovr: 78, avatar: "⚽" },
+      { name: "Lewis Ferguson", country: "Escocia", pos: "MC", ovr: 76, avatar: "⚽" },
+      { name: "Tom Bischof", country: "Alemania", pos: "MC", ovr: 73, avatar: "⚽" },
+      { name: "Matías Soulé", country: "Argentina", pos: "ED", ovr: 78, avatar: "⚽" },
+      { name: "El Chadaille Bitshiabu", country: "Francia", pos: "DFC", ovr: 72, avatar: "⚽" },
+      { name: "Martin Terrier", country: "Francia", pos: "EI", ovr: 79, avatar: "⚽" },
+      { name: "Lucas Gourna-Douath", country: "Francia", pos: "MCD", ovr: 75, avatar: "⚽" },
+      { name: "Karim Konaté", country: "Costa de Marfil", pos: "DEL", ovr: 74, avatar: "⚽" },
+      { name: "Johan Bakayoko", country: "Bélgica", pos: "ED", ovr: 78, avatar: "⚽" },
+      { name: "Antonio Blanco", country: "España", pos: "MCD", ovr: 72, avatar: "⚽" },
+      { name: "Désiré Doué", country: "Francia", pos: "MCO", ovr: 80, avatar: "⚽" },
+      { name: "Rodrigo Ribeiro", country: "Portugal", pos: "DEL", ovr: 71, avatar: "⚽" },
+      { name: "Arnau Martínez", country: "España", pos: "LD", ovr: 77, avatar: "⚽" },
+      { name: "Kevin Zenón", country: "Argentina", pos: "MI", ovr: 75, avatar: "⚽" },
+      { name: "Fábio Silva", country: "Portugal", pos: "DEL", ovr: 74, avatar: "⚽" },
+      { name: "Savinho", country: "Brasil", pos: "ED", ovr: 82, avatar: "⚡" },
+      { name: "Julien Duranville", country: "Bélgica", pos: "EI", ovr: 72, avatar: "⚽" },
+      { name: "Pau Víctor", country: "España", pos: "DEL", ovr: 72, avatar: "⚽" },
+      { name: "Antonio Nusa", country: "Noruega", pos: "EI", ovr: 74, avatar: "⚽" },
+      { name: "Chris Rigg", country: "Inglaterra", pos: "MC", ovr: 70, avatar: "⚽" },
+      { name: "Luka Sučić", country: "Croacia", pos: "MC", ovr: 77, avatar: "⚽" },
+      { name: "Gabriel Moscardó", country: "Brasil", pos: "MCD", ovr: 72, avatar: "⚽" },
+      { name: "Alberto Moleiro", country: "España", pos: "MCO", ovr: 77, avatar: "⚽" },
+      { name: "Estevão", country: "Brasil", pos: "ED", ovr: 79, avatar: "✨" },
+      { name: "Sverre Nypan", country: "Noruega", pos: "MC", ovr: 69, avatar: "⚽" },
+      { name: "Youssoufa Moukoko", country: "Alemania", pos: "DEL", ovr: 73, avatar: "⚽" },
+      { name: "Arda Güler", country: "Turquía", pos: "MCO", ovr: 80, avatar: "🪄" },
+      { name: "Assane Diao", country: "España", pos: "ED", ovr: 73, avatar: "⚽" },
+      { name: "Kendry Páez", country: "Ecuador", pos: "MCO", ovr: 78, avatar: "💎" }
+    ];
+
+    let currentRegularPool = [];
+    let currentPrimePool = [];
+
+    let p1 = { name: "Jugador 1", budget: 20, squad: [] };
+    let p2 = { name: "Jugador 2", budget: 20, squad: [] };
+
+    // Variable global para controlar a quién le toca ABRIR la subasta actual
+    let starterPlayer = 1; 
+
+    let currentAuction = {
+      footballer: null,
+      highestBidder: null,
+      currentPrice: 0,
+      turnPlayer: null, // 1 o 2
+      firstBidDone: false,
+      isRouletteSpinning: false
+    };
+
+    function showWelcomeScreen() {
+      document.getElementById('end-modal').classList.remove('active');
+      document.getElementById('welcome-screen').classList.remove('hidden');
+    }
+
+    function startGame() {
+      const name1 = document.getElementById('init-p1-name').value.trim() || "Jugador 1";
+      const name2 = document.getElementById('init-p2-name').value.trim() || "Jugador 2";
+
+      p1 = { name: name1, budget: 20, squad: [] };
+      p2 = { name: name2, budget: 20, squad: [] };
+
+      document.getElementById('display-p1-name').textContent = p1.name;
+      document.getElementById('display-p2-name').textContent = p2.name;
+
+      document.getElementById('welcome-screen').classList.add('hidden');
+
+      currentRegularPool = [...REGULAR_FOOTBALLERS].sort(() => Math.random() - 0.5);
+      currentPrimePool = [...PRIME_FOOTBALLERS].sort(() => Math.random() - 0.5);
+
+      // Girar la ruleta ÚNICAMENTE al inicio del juego
+      spinInitialRoulette();
+    }
+
+    function spinInitialRoulette() {
+      const rouletteBox = document.getElementById('roulette-winner-box');
+      document.getElementById('roulette-title-lbl').textContent = "🎰 Sorteo Inicial de Partida";
+      
+      currentAuction.isRouletteSpinning = true;
+      let counter = 0;
+
+      const interval = setInterval(() => {
+        counter++;
+        rouletteBox.textContent = counter % 2 === 0 ? p1.name.toUpperCase() : p2.name.toUpperCase();
+        
+        if (counter > 15) {
+          clearInterval(interval);
+          // Determinar quién empieza el primer jugador
+          starterPlayer = Math.random() < 0.5 ? 1 : 2;
+          const starterObj = starterPlayer === 1 ? p1 : p2;
+
+          rouletteBox.textContent = `🎲 EMPIEZA LA PARTIDA: ${starterObj.name.toUpperCase()}`;
+          currentAuction.isRouletteSpinning = false;
+
+          setTimeout(() => {
+            nextAuction();
+          }, 1200);
+        }
+      }, 100);
+    }
+
+    function updateUI() {
+      document.getElementById('p1-budget').textContent = `$${p1.budget}`;
+      document.getElementById('p2-budget').textContent = `$${p2.budget}`;
+      document.getElementById('p1-count').textContent = `${p1.squad.length}/4 fichajes`;
+      document.getElementById('p2-count').textContent = `${p2.squad.length}/4 fichajes`;
+
+      document.getElementById('btn-p1-bid').textContent = `${p1.name} +$1`;
+      document.getElementById('btn-p2-bid').textContent = `${p2.name} +$1`;
+
+      document.getElementById('squad-p1-title').textContent = `Equipo de ${p1.name}`;
+      document.getElementById('squad-p2-title').textContent = `Equipo de ${p2.name}`;
+
+      // Resaltar tarjeta con turno
+      document.getElementById('card-p1').classList.toggle('active-turn', currentAuction.turnPlayer === 1 && !currentAuction.isRouletteSpinning);
+      document.getElementById('card-p2').classList.toggle('active-turn', currentAuction.turnPlayer === 2 && !currentAuction.isRouletteSpinning);
+
+      // Deshabilitar botones según el turno
+      const canP1Bid = currentAuction.turnPlayer === 1 && p1.squad.length < 4 && p1.budget >= currentAuction.currentPrice + 1 && !currentAuction.isRouletteSpinning;
+      const canP2Bid = currentAuction.turnPlayer === 2 && p2.squad.length < 4 && p2.budget >= currentAuction.currentPrice + 1 && !currentAuction.isRouletteSpinning;
+
+      document.getElementById('btn-p1-bid').disabled = !canP1Bid;
+      document.getElementById('btn-p2-bid').disabled = !canP2Bid;
+
+      // El botón pasar solo se activa si ya hubo al menos 1 oferta inicial
+      document.getElementById('btn-pass').disabled = !currentAuction.firstBidDone || currentAuction.isRouletteSpinning;
+
+      renderSquad('squad-p1-list', p1);
+      renderSquad('squad-p2-list', p2);
+    }
+
+    function renderSquad(listId, playerObj) {
+      const listEl = document.getElementById(listId);
+      if (playerObj.squad.length === 0) {
+        listEl.innerHTML = `<div style="color: var(--text-sub); font-size: 11px;">Sin fichajes</div>`;
+        return;
+      }
+
+      listEl.innerHTML = playerObj.squad.map(item => `
+        <div class="squad-item ${item.isPrime ? 'is-prime' : ''}">
+          <span>${item.avatar} ${item.name} (${item.ovr})</span>
+          <span style="color: #34d399; font-weight: bold;">$${item.price}</span>
+        </div>
+      `).join('');
+    }
+
+    function nextAuction() {
+      // Verificar si el juego terminó
+      if ((p1.squad.length >= 4 && p2.squad.length >= 4) || (currentRegularPool.length === 0 && currentPrimePool.length === 0)) {
+        endGame();
+        return;
+      }
+
+      // Ajustar si un jugador ya completó su plantilla de 4
+      if (p1.squad.length >= 4) starterPlayer = 2;
+      if (p2.squad.length >= 4) starterPlayer = 1;
+
+      // 15% de probabilidad de Leyenda Prime
+      const isPrimeSpawn = Math.random() < 0.15 && currentPrimePool.length > 0;
+      let selectedFootballer = isPrimeSpawn ? currentPrimePool.pop() : (currentRegularPool.pop() || currentPrimePool.pop());
+
+      currentAuction = {
+        footballer: selectedFootballer,
+        highestBidder: null,
+        currentPrice: 0,
+        turnPlayer: starterPlayer, // Le toca al jugador que le corresponde alternar
+        firstBidDone: false,
+        isRouletteSpinning: false
+      };
+
+      const starterObj = starterPlayer === 1 ? p1 : p2;
+
+      document.getElementById('roulette-title-lbl').textContent = "📌 ABRIR SUBASTA (TURNO ROTATIVO)";
+      document.getElementById('roulette-winner-box').textContent = `OFERTA INICIAL: ${starterObj.name.toUpperCase()}`;
+
+      const cardBox = document.getElementById('auction-card-box');
+      cardBox.classList.toggle('prime-card', selectedFootballer.isPrime);
+
+      document.getElementById('fb-name').textContent = `${selectedFootballer.name} (${selectedFootballer.ovr})`;
+      document.getElementById('fb-info').textContent = `${selectedFootballer.country} · ${selectedFootballer.pos}`;
+      document.getElementById('fb-avatar').textContent = selectedFootballer.avatar;
+      document.getElementById('current-bid-txt').textContent = `$0`;
+      document.getElementById('bid-turn-txt').textContent = `Debes abrir la subasta: ${starterObj.name}`;
+
+      updateUI();
+    }
+
+    function bid(playerNum) {
+      if (currentAuction.turnPlayer !== playerNum || currentAuction.isRouletteSpinning) return;
+
+      currentAuction.currentPrice += 1;
+      currentAuction.highestBidder = playerNum;
+      currentAuction.firstBidDone = true;
+
+      // Animación de aumento de precio
+      const bidTxt = document.getElementById('current-bid-txt');
+      bidTxt.textContent = `$${currentAuction.currentPrice}`;
+      bidTxt.classList.add('bump');
+      setTimeout(() => bidTxt.classList.remove('bump'), 150);
+
+      // Alternar turno entre los dos jugadores durante la misma subasta
+      const nextTurn = playerNum === 1 ? 2 : 1;
+      const nextPlayerObj = nextTurn === 1 ? p1 : p2;
+
+      if (nextPlayerObj.squad.length < 4 && nextPlayerObj.budget >= currentAuction.currentPrice + 1) {
+        currentAuction.turnPlayer = nextTurn;
+        document.getElementById('bid-turn-txt').textContent = `Turno de contraoferta: ${nextPlayerObj.name}`;
+      } else {
+        document.getElementById('bid-turn-txt').textContent = `${nextPlayerObj.name} no tiene presupuesto para superar la oferta. ¡Se puede cerrar!`;
+      }
+
+      updateUI();
+    }
+
+    function passTurn() {
+      if (!currentAuction.firstBidDone || currentAuction.highestBidder === null) return;
+
+      const winningPlayerNum = currentAuction.highestBidder;
+      const winnerObj = winningPlayerNum === 1 ? p1 : p2;
+
+      winnerObj.budget -= currentAuction.currentPrice;
+      winnerObj.squad.push({
+        ...currentAuction.footballer,
+        price: currentAuction.currentPrice
+      });
+
+      // Toast animación
+      const toast = document.getElementById('signing-toast');
+      toast.textContent = `¡${currentAuction.footballer.name.toUpperCase()} FICHÓ POR ${winnerObj.name.toUpperCase()}!`;
+      toast.classList.add('show');
+
+      // ALTERNAR EL INICIADOR PARA LA PRÓXIMA SUBASTA
+      starterPlayer = starterPlayer === 1 ? 2 : 1;
+
+      setTimeout(() => {
+        toast.classList.remove('show');
+        nextAuction();
+      }, 1200);
+    }
+
+    function endGame() {
+      let p1Score = p1.squad.reduce((sum, item) => sum + item.ovr, 0);
+      let p2Score = p2.squad.reduce((sum, item) => sum + item.ovr, 0);
+
+      let winnerName = p1Score > p2Score ? `¡GANA ${p1.name.toUpperCase()}!` : p2Score > p1Score ? `¡GANA ${p2.name.toUpperCase()}!` : "¡EMPATE!";
+
+      document.getElementById('winner-title').textContent = winnerName;
+      document.getElementById('winner-subtitle').textContent = `Medias Totales: ${p1.name} (${p1Score}) vs ${p2.name} (${p2Score})`;
+
+      document.getElementById('results-detail').innerHTML = `
+        <strong>${p1.name}:</strong><br/>
+        ${p1.squad.map(i => `• ${i.name} - OVR ${i.ovr} ($${i.price})<br/>`).join('')}
+        <hr style="border:0; border-top:1px solid #232d42; margin: 8px 0;" />
+        <strong>${p2.name}:</strong><br/>
+        ${p2.squad.map(i => `• ${i.name} - OVR ${i.ovr} ($${i.price})<br/>`).join('')}
+      `;
+
+      document.getElementById('end-modal').classList.add('active');
+
+      if (typeof confetti === 'function') {
+        confetti({ particleCount: 130, spread: 80, origin: { y: 0.6 } });
+      }
+    }
+  </script>
+</body>
+</html>
